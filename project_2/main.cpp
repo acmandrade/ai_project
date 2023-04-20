@@ -32,6 +32,36 @@ int distance(const std::vector<std::vector<int>>& state, const std::vector<std::
     return distance;
 }
 
+//Implement unique heuristic here
+int tile_conflict(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
+    int manhattan_distance = 0;
+    int tile_conflicts = 0;
+    int n = state.size();
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            int value = state[i][j];
+            if (value != 0) {
+                int goal_i = (value - 1) / n;
+                int goal_j = (value - 1) % n;
+                manhattan_distance += abs(i - goal_i) + abs(j - goal_j);
+
+                if (goal_i == i && goal_j != j) {
+                    for (int k = j + 1; k < n; ++k) {
+                        if (state[i][k] == (value + 1) % (n * n)) {
+                            ++tile_conflicts;
+                        }
+                    }
+                }
+            }
+        }
+    }
+//    if (heuristic_choice == 1) {
+//        return manhattan_distance;
+//    } else {
+//        return manhattan_distance + tile_conflicts;
+//    }
+    return tile_conflicts;
+}
 bool is_goal(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
     return state == goal;
 }
@@ -51,7 +81,7 @@ std::vector<std::vector<std::vector<int>>> generate_successors(const std::vector
 
     std::vector<std::vector<std::vector<int>>> successors;
     std::vector<std::pair<int, int>> directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-
+    
     for (const auto& direction : directions) {
         int new_i = i0 + direction.first;
         int new_j = j0 + direction.second;
@@ -75,15 +105,37 @@ void print_puzzle(const std::vector<std::vector<int>>& puzzle) {
     }
 }
 
-PuzzleNode* create_puzzle_node(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
+//PuzzleNode* create_puzzle_node(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
+//    PuzzleNode* node = new PuzzleNode();
+//    node->state = state;
+//    node->g = 0;
+//    node->h = distance(state, goal);
+//    node->f = node->g + node->h;
+//    node->parent = nullptr;
+//
+//    //increments the node counter
+//    nodes_generated++;
+//
+//    return node;
+//}
+
+PuzzleNode* create_puzzle_node(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal, int heuristic_choice) {
     PuzzleNode* node = new PuzzleNode();
     node->state = state;
     node->g = 0;
-    node->h = distance(state, goal);
+    //node->h = distance(state, goal);
+    if (heuristic_choice == 1) {
+        node->h = distance(state, goal);
+    } else if (heuristic_choice == 2) {
+        node->h = tile_conflict(state, goal);
+    } else {
+        std::cout << "Invalid choice. Defaulting to Manhattan distance." << std::endl;
+        node->h = distance(state, goal);
+    }
     node->f = node->g + node->h;
     node->parent = nullptr;
     
-    //increments the node counter
+    //increments node counter
     nodes_generated++;
     
     return node;
@@ -138,8 +190,7 @@ struct container_hash {
 //    }
 //}
 
-
-std::vector<PuzzleNode*> a_star(PuzzleNode* initial_node, const std::vector<std::vector<int>>& goal) {
+std::vector<PuzzleNode*> a_star(PuzzleNode* initial_node, const std::vector<std::vector<int>>& goal, int heuristic_choice) {
     auto cmp = [](PuzzleNode* a, PuzzleNode* b) { return a->f > b->f; };
     
     //Stores nodes in the OPEN list and is ordered by f' value
@@ -171,7 +222,7 @@ std::vector<PuzzleNode*> a_star(PuzzleNode* initial_node, const std::vector<std:
                 continue;
             }
 
-            PuzzleNode* successor_node = create_puzzle_node(successor_state, goal);
+            PuzzleNode* successor_node = create_puzzle_node(successor_state, goal, heuristic_choice);
             
             successor_node->parent = best_node;
             //set best_nodde to successor
@@ -180,19 +231,6 @@ std::vector<PuzzleNode*> a_star(PuzzleNode* initial_node, const std::vector<std:
             successor_node->f = successor_node->g + successor_node->h;
             
             open.push(successor_node);
-
-//            if (closed.find(successor_state) != closed.end()) {
-//                auto it = std::find_if(closed.begin(), closed.end(), [&successor_state](const auto& old_state) {
-//                    return old_state == successor_state;
-//                });
-//
-//                if (it != closed.end()) {
-//                    propagate_cost_downward(successor_node, best_node->g + 1, goal);
-//                }
-//            } else {
-//                open.push(successor_node);
-//            }
-
         }
     }
 
@@ -214,16 +252,26 @@ int get_tree_depth(const std::vector<PuzzleNode*>& path) {
 double get_b(const std::vector<PuzzleNode*>& path){
     int ng = get_nodes();
     int d = get_tree_depth(path);
-    
+
     if(d == 0){
         return 0.0;
     }
-    
+
     return static_cast<double>(ng) / d;
 }
 
 int main() {
-    std::vector<std::vector<int>> initial_state = {
+    
+    int heuristic_choice;
+    int choice;
+    
+    std::vector<std::vector<int>> initial_state1 = {
+        {2, 8, 3},
+        {1, 6, 4},
+        {0, 7, 5}
+    };
+    
+    std::vector<std::vector<int>> initial_state2 = {
         {2, 1, 6},
         {4, 0, 8},
         {7, 5, 3}
@@ -234,11 +282,43 @@ int main() {
         {8, 0, 4},
         {7, 6, 5}
     };
+    
+    std::cout << "Choose an initial state: " << std::endl;
+    std::cout << "1:\n" ;
+    print_puzzle(initial_state1);
+    std::cout << std::endl << "2:\n";
+    print_puzzle(initial_state2);
+    std::cout << "Enter : " << std::endl;
+    std::cin >> choice;
 
+    std::vector<std::vector<int>> initial_state;
+    switch (choice) {
+        case 1:
+            initial_state = initial_state1;
+            break;
+        case 2:
+            initial_state = initial_state2;
+            break;
+        default:
+            std::cout << "Invalid choice. Using the first initial state.\n";
+            initial_state = initial_state1;
+            break;
+    }
+    
+    std::cout << "Choose a heuristic: " << std::endl;
+    std::cout << "1. A* Final" << std::endl;
+    std::cout << "2. Tile conflicts" << std::endl;
+    std::cin >> heuristic_choice;
+    
+    if(heuristic_choice != 1 && heuristic_choice != 2) {
+        std::cout << "Invalid choice. Using A* Final" << std::endl;
+        heuristic_choice = 1;
+    }
+    
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    PuzzleNode* initial_node = create_puzzle_node(initial_state, goal_state);
-    std::vector<PuzzleNode*> solution_path = a_star(initial_node, goal_state);
+    PuzzleNode* initial_node = create_puzzle_node(initial_state, goal_state, heuristic_choice);
+    std::vector<PuzzleNode*> solution_path = a_star(initial_node, goal_state, heuristic_choice);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
