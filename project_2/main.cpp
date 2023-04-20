@@ -223,7 +223,14 @@ double get_b(const std::vector<PuzzleNode*>& path){
 }
 
 int main() {
-    std::vector<std::vector<int>> initial_state = {
+    
+    std::vector<std::vector<int>> initial_state1 = {
+        {2, 8, 3},
+        {1, 6, 4},
+        {0, 7, 5}
+    };
+    
+    std::vector<std::vector<int>> initial_state2 = {
         {2, 1, 6},
         {4, 0, 8},
         {7, 5, 3}
@@ -234,7 +241,30 @@ int main() {
         {8, 0, 4},
         {7, 6, 5}
     };
+    
+    int choice;
+    std::cout << "Choose an initial state:\n";
+    std::cout << "1:\n";
+    print_puzzle(initial_state1);
+    std::cout << "\n2:\n";
+    print_puzzle(initial_state2);
+    std::cout << "\nEnter, : ";
+    std::cin >> choice;
 
+    std::vector<std::vector<int>> initial_state;
+    switch (choice) {
+        case 1:
+            initial_state = initial_state1;
+            break;
+        case 2:
+            initial_state = initial_state2;
+            break;
+        default:
+            std::cout << "Invalid choice. Using the first initial state.\n";
+            initial_state = initial_state1;
+            break;
+    }
+    
     auto start_time = std::chrono::high_resolution_clock::now();
 
     PuzzleNode* initial_node = create_puzzle_node(initial_state, goal_state);
