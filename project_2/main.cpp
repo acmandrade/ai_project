@@ -33,35 +33,26 @@ int distance(const std::vector<std::vector<int>>& state, const std::vector<std::
 }
 
 //Implement unique heuristic here
-int tile_conflict(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
-    int manhattan_distance = 0;
-    int tile_conflicts = 0;
+int diagonal_conflict(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
+    int conflict_count = 0;
     int n = state.size();
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
+    
+    for (int i = 0; i < n; ++i){
+        for (int j = 0; j < n; ++j){
             int value = state[i][j];
             if (value != 0) {
                 int goal_i = (value - 1) / n;
                 int goal_j = (value - 1) % n;
-                manhattan_distance += abs(i - goal_i) + abs(j - goal_j);
-
-                if (goal_i == i && goal_j != j) {
-                    for (int k = j + 1; k < n; ++k) {
-                        if (state[i][k] == (value + 1) % (n * n)) {
-                            ++tile_conflicts;
-                        }
-                    }
+                
+                if ((i - j == goal_i - goal_j || i + j == goal_i + goal_j) && (i != goal_i || j != goal_j)) {
+                    conflict_count++;
                 }
             }
         }
     }
-//    if (heuristic_choice == 1) {
-//        return manhattan_distance;
-//    } else {
-//        return manhattan_distance + tile_conflicts;
-//    }
-    return tile_conflicts;
+    return  conflict_count * 2;
 }
+
 bool is_goal(const std::vector<std::vector<int>>& state, const std::vector<std::vector<int>>& goal) {
     return state == goal;
 }
@@ -127,7 +118,7 @@ PuzzleNode* create_puzzle_node(const std::vector<std::vector<int>>& state, const
     if (heuristic_choice == 1) {
         node->h = distance(state, goal);
     } else if (heuristic_choice == 2) {
-        node->h = tile_conflict(state, goal);
+        node->h = diagonal_conflict(state, goal);
     } else {
         std::cout << "Invalid choice. Defaulting to Manhattan distance." << std::endl;
         node->h = distance(state, goal);
@@ -284,12 +275,13 @@ int main() {
     };
     
     std::cout << "Choose an initial state: " << std::endl;
-    std::cout << "1:\n" ;
+    std::cout << "1: " << std::endl;
     print_puzzle(initial_state1);
-    std::cout << std::endl << "2:\n";
+    std::cout << std::endl << "2: " << std::endl;
     print_puzzle(initial_state2);
-    std::cout << "Enter : " << std::endl;
+    std::cout << "Enter : ";
     std::cin >> choice;
+    std::cout << std::endl;
 
     std::vector<std::vector<int>> initial_state;
     switch (choice) {
@@ -307,8 +299,10 @@ int main() {
     
     std::cout << "Choose a heuristic: " << std::endl;
     std::cout << "1. A* Final" << std::endl;
-    std::cout << "2. Tile conflicts" << std::endl;
+    std::cout << "2. Diagonal conflict" << std::endl;
+    std::cout << "Enter: ";
     std::cin >> heuristic_choice;
+    std::cout << std::endl;
     
     if(heuristic_choice != 1 && heuristic_choice != 2) {
         std::cout << "Invalid choice. Using A* Final" << std::endl;
